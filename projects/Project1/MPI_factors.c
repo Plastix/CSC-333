@@ -19,7 +19,7 @@ int main(int argc, char *argv[]) {
 
     if (argc != 2) {
         if (my_rank == 0) {
-            printf("usage: %s <number>", argv[0]);
+            printf("usage: %s <number>\n", argv[0]);
         }
     } else {
 
