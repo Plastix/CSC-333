@@ -8,6 +8,9 @@ int main(int argc, char *argv[]) {
     int my_rank;               /* My process rank        */
     //Don't put any MPI stuff before this line
 
+    // Timing variables
+    double local_start, local_finish, local_elapsed, elapsed;
+
     MPI_Init(&argc, &argv);  //sets up the MPI. Always this line!
 
     /* Get the number of processes */
@@ -25,8 +28,11 @@ int main(int argc, char *argv[]) {
 
         // Read number from stdin
         unsigned long long bignumber = strtoull(argv[1], NULL, 10);
-        long i;
 
+        MPI_Barrier(MPI_COMM_WORLD); // Sync up processes
+        local_start = MPI_Wtime();
+
+        long i;
         int my_factors = 0;
 
         for (i = my_rank + 1; i <= bignumber; i += comm_sz) {
@@ -37,6 +43,9 @@ int main(int argc, char *argv[]) {
 
         if (my_rank != 0) {
             MPI_Send(&my_factors, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
+            local_finish = MPI_Wtime();
+            local_elapsed = local_finish - local_start;
+            MPI_Reduce(&local_elapsed, &elapsed, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
         } else {
             int q;
             int global_factors = my_factors;
@@ -47,7 +56,13 @@ int main(int argc, char *argv[]) {
                 global_factors += other_factors;
             }
 
+            local_finish = MPI_Wtime();
+            local_elapsed = local_finish - local_start;
+            MPI_Reduce(&local_elapsed, &elapsed, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+
             printf("Found a total of %d factors in %llu!\n", global_factors, bignumber);
+
+            printf("Elapsed time = %e seconds\n", elapsed);
         }
 
     }
