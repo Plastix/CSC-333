@@ -34,6 +34,7 @@ int main(int argc, char *argv[]) {
 
         long i;
         int my_factors = 0;
+        int global_factors;
 
         for (i = my_rank + 1; i <= bignumber; i += comm_sz) {
             if ((bignumber % i) == 0) {
@@ -41,27 +42,15 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        if (my_rank != 0) {
-            MPI_Send(&my_factors, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
-            local_finish = MPI_Wtime();
-            local_elapsed = local_finish - local_start;
-            MPI_Reduce(&local_elapsed, &elapsed, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-        } else {
-            int q;
-            int global_factors = my_factors;
-            int other_factors;
+        MPI_Reduce(&my_factors, &global_factors, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
 
-            for (q = 1; q < comm_sz; q++) {
-                MPI_Recv(&other_factors, 1, MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                global_factors += other_factors;
-            }
+        local_finish = MPI_Wtime();
+        local_elapsed = local_finish - local_start;
+        
+        MPI_Reduce(&local_elapsed, &elapsed, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 
-            local_finish = MPI_Wtime();
-            local_elapsed = local_finish - local_start;
-            MPI_Reduce(&local_elapsed, &elapsed, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-
+        if (my_rank == 0) {
             printf("Found a total of %d factors in %llu!\n", global_factors, bignumber);
-
             printf("Elapsed time = %e seconds\n", elapsed);
         }
 
