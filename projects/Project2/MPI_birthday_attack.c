@@ -44,7 +44,7 @@ int main(int argc, char *argv[]) {
         unsigned int n = (unsigned int) strtoul(argv[1], NULL, 10);
         int bits = atoi(argv[2]);
 
-        char collisionFound = 0;
+        int collisionFound = 0;
         int tries = 1;
 
         unsigned int buffer[n];
@@ -79,7 +79,7 @@ int main(int argc, char *argv[]) {
             }
 
             // TODO Make this a struct
-            MPI_Allreduce(&collisionFound, &collisionFound, 1, MPI_CHAR, MPI_MAX, MPI_COMM_WORLD);
+            MPI_Allreduce(&collisionFound, &collisionFound, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
 
             if (collisionFound) {
                 break;
