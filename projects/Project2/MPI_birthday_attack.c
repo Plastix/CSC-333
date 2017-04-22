@@ -69,13 +69,14 @@ int main(int argc, char *argv[]) {
         }
 
         safeprintf(my_rank, "Broadcasting hashes to all nodes...\n");
-        MPI_Bcast(buffer, n, MPI_INT, ROOT_NODE, MPI_COMM_WORLD);
+        MPI_Bcast(buffer, n, MPI_UNSIGNED_LONG, ROOT_NODE, MPI_COMM_WORLD);
 
         safeprintf(my_rank, "Checking for collisions...\n");
-        for (int i = 0; i < n && !collision; i++) {
-            for (int j = my_rank + i + 1; j < n && !collision; j += comm_sz) {
-                unsigned long h1 = (buffer[i] & ((1l << bits) - 1));
-                unsigned long h2 = (buffer[j] & ((1l << bits) - 1));
+        unsigned int i, j;
+        for (i = 0; i < n - 1 && !collision; i++) {
+            for (j = my_rank + i + 1; j < n && !collision; j += comm_sz) {
+                unsigned long h1 = (buffer[i] & ((1ul << bits) - 1));
+                unsigned long h2 = (buffer[j] & ((1ul << bits) - 1));
 
                 if (h1 == h2) {
                     collision = 1;
