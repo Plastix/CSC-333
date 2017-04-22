@@ -54,7 +54,6 @@ unsigned int byteArrayToInt(unsigned char *inByteArray) {
 //the same, but for 8 bytes
 //corresponding to a long
 unsigned long byteArrayToLong(unsigned char *inByteArray) {
-    printf("sizeof long: %lu\n", sizeof(unsigned long));
     unsigned int MostSignificantInt = byteArrayToInt(inByteArray);
     unsigned int LeastSignificantInt = byteArrayToInt(inByteArray + 4);
     unsigned long result = (unsigned long) MostSignificantInt << 32 | LeastSignificantInt;
