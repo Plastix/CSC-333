@@ -57,6 +57,8 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
+    safeprintf(my_rank, "N: %u, B: %i\n", n, bits);
+
     MPI_Op myOp;
     MPI_Op_create(collisionOp, 1, &myOp);
 
