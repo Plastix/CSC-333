@@ -15,17 +15,6 @@ void safeprintf(const int my_rank, const char *format, ...) {
     }
 }
 
-typedef struct {
-    char found;
-    int i, j;
-} Collision;
-
-void collisionOp(Collision *in, Collision *inout, int *len, MPI_Datatype *datatype) {
-    if (in->found) {
-        *inout = *in;
-    }
-}
-
 int main(int argc, char *argv[]) {
 
     int comm_sz;               /* Number of processes    */
@@ -59,25 +48,7 @@ int main(int argc, char *argv[]) {
 
     safeprintf(my_rank, "N: %u, B: %i\n", n, bits);
 
-    MPI_Op myOp;
-    MPI_Op_create(collisionOp, 1, &myOp);
-
-    MPI_Datatype ctype;
-    MPI_Datatype types[3] = {MPI_CHAR, MPI_INT, MPI_INT};
-    int lengths[3] = {1, 1, 1};
-    MPI_Aint offsets[3];
-    offsets[0] = offsetof(Collision, found);
-    offsets[1] = offsetof(Collision, i);
-    offsets[2] = offsetof(Collision, j);
-    MPI_Type_create_struct(3, lengths, offsets, types, &ctype);
-    MPI_Type_commit(&ctype);
-
-
-    Collision collision;
-    collision.found = 0;
-    collision.i = -1;
-    collision.j = -1;
-
+    int found = 0;
     unsigned int collisions = 0;
     unsigned long buffer[n];
 
@@ -97,29 +68,28 @@ int main(int argc, char *argv[]) {
         MPI_Bcast(buffer, n, MPI_UNSIGNED_LONG, ROOT_NODE, MPI_COMM_WORLD);
 
         unsigned int i, j;
-        for (i = 0; i < n - 1 && !collision.found; i++) {
-            for (j = my_rank + i + 1; j < n && !collision.found; j += comm_sz) {
+        for (i = 0; i < n - 1 && !found; i++) {
+            for (j = my_rank + i + 1; j < n && !found; j += comm_sz) {
                 unsigned long h1 = (buffer[i] & ((1ul << bits) - 1));
                 unsigned long h2 = (buffer[j] & ((1ul << bits) - 1));
 
                 if (h1 == h2) {
-                    collision.found = 1;
-                    collision.i = i;
-                    collision.j = j;
+                    found = 1;
                 }
             }
 
-            MPI_Allreduce(MPI_IN_PLACE, &collision, 1, ctype, myOp, MPI_COMM_WORLD);
+            MPI_Allreduce(MPI_IN_PLACE, &found, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
         }
 
-        if (collision.found) {
+        if (found) {
             if (my_rank == 0) {
-                collisions++;
-                printf("Total Collisions Found: %u\n", collisions);
+                collisions += found;
+                // Limit I/O a little
+                if (collisions % 10 == 0) {
+                    printf("Total Collisions Found: %u\n", collisions);
+                }
             }
-            collision.found = 0;
-            collision.i = -1;
-            collision.j = -1;
+            found = 0;
         }
     }
 #pragma clang diagnostic pop
