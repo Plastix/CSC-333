@@ -1,0 +1,14 @@
+CC=gcc
+CFLAGS=-I.
+DEPS = 
+OBJ = runcell.o CellAut.o 
+
+%.o: %.c $(DEPS)
+	$(CC) -c -o $@ $< $(CFLAGS)
+
+runcell: $(OBJ)
+	$(CC) -o $@ $^ $(CFLAGS)
+
+
+clean:
+	rm -f *.o *~ 
