@@ -30,7 +30,7 @@ void DistributeLeftAndRightVals(int myID, int numprocs, int *mylocalcells, int l
 
     MPI_Request lreq;
     MPI_Isend(&myfirst, 1, MPI_INT, leftID, 0, MPI_COMM_WORLD, &lreq);
--
+
     MPI_Request rreq;
     MPI_Isend(&mylast, 1, MPI_INT, rightID, 0, MPI_COMM_WORLD, &rreq);
 
