@@ -97,7 +97,15 @@ int main(int argc, char *argv[]) {
     MPI_Comm_rank(MPI_COMM_WORLD, &id);
     MPI_Comm_size(MPI_COMM_WORLD, &p);
 
-    int WORLDSIZE = 128;
+    if (argc != 4) {
+        if (id == 0) {
+            printf("Usage: %s <world size> <iterations> <rule>\n", argv[0]);
+            MPI_Finalize();
+            exit(1);
+        }
+    }
+
+    int WORLDSIZE = atoi(argv[1]);
 
     int *localcells; //local array
     int localsize = (WORLDSIZE / p) + 2;  //size of local array
@@ -131,11 +139,10 @@ int main(int argc, char *argv[]) {
     printf("I am node %d, my local world is now:\n", id);
     printWorld(localcells, localsize, id);
 
-
     int iterstep = 1;
     int curiters = 0;
-    int maxiters = 100;
-    int rule = 30;
+    int maxiters = atoi(argv[2]);
+    int rule = atoi(argv[3]);
 
     for (curiters = 0; curiters < maxiters; curiters++) {
         MPIRunCellWorld(id, p, localcells, localsize, iterstep, rule);
