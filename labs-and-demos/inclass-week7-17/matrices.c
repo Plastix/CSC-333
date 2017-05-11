@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include "omp.h"
 
 void randomizeMat(double *mat, int n, short *seed) {
     int row, col;
@@ -61,7 +62,7 @@ int main(int argc, char *argv[]) {
         N = atoi(argv[1]);
         threadCount = atoi(argv[2]);
 
-        printf("Rows: %d, Cols: %d\n", N, N);
+//        printf("Rows: %d, Cols: %d\n", N, N);
     }
 
     double *MAT = calloc(N * N, sizeof(double));
@@ -71,17 +72,27 @@ int main(int argc, char *argv[]) {
 
     randomizeMat(MAT, N, xi);
     randomizeMat(MAT2, N, xi);
-    sum(MAT, MAT2, N, threadCount, sumsMAT);
-    transpose(MAT, N, threadCount, transposeMat);
 
-    printf("MAT1\n");
-    printMat(MAT, N);
-    printf("MAT2\n");
-    printMat(MAT2, N);
-    printf("ADD\n");
-    printMat(sumsMAT, N);
-    printf("TRANSPOSE\n");
-    printMat(transposeMat, N);
+    double start = omp_get_wtime();
+    sum(MAT, MAT2, N, threadCount, sumsMAT);
+    double end = omp_get_wtime();
+    double sum_elapsed = end - start;
+    start = omp_get_wtime();
+    transpose(MAT, N, threadCount, transposeMat);
+    end = omp_get_wtime();
+    double transpose_elapsed = end - start;
+//
+//    printf("MAT1\n");
+//    printMat(MAT, N);
+//    printf("MAT2\n");
+//    printMat(MAT2, N);
+//    printf("ADD\n");
+//    printMat(sumsMAT, N);
+//    printf("TRANSPOSE\n");
+//    printMat(transposeMat, N);
+
+    printf("Add Time: %e secs\n", sum_elapsed);
+    printf("Transpose Time: %e secs\n", transpose_elapsed);
 
     free(MAT);
     free(MAT2);
