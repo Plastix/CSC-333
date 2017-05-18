@@ -35,8 +35,8 @@ void edgeGradient(unsigned char inImg[MAXROWS][MAXCOLS], int rows, int cols,
             for (krow = 0; krow < 3; krow++) {
                 for (kcol = 0; kcol < 3; kcol++) {
                     //get the kernel value
-                    double xval = sobelXkernel[krow][kcol] * 0.25;
-                    double yval = sobelYkernel[krow][kcol] * 0.25;
+                    int xval = sobelXkernel[krow][kcol];
+                    int yval = sobelYkernel[krow][kcol];
 
                     int krowoffset = krow - 1;
                     int kcoloffset = kcol - 1;
@@ -47,8 +47,8 @@ void edgeGradient(unsigned char inImg[MAXROWS][MAXCOLS], int rows, int cols,
                     curcol = curcol < 0 ? 0 : curcol;
                     currow = currow > rows - 1 ? rows - 1 : currow;
                     curcol = curcol > cols - 1 ? cols - 1 : curcol;
-                    xAcc += inImg[currow][curcol] * xval;
-                    yAcc += inImg[currow][curcol] * yval;
+                    xAcc += inImg[currow][curcol] * 0.25 * xval;
+                    yAcc += inImg[currow][curcol] * 0.25 * yval;
                 }
             }
 
