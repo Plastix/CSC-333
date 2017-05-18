@@ -13,7 +13,8 @@ based initially on demopgm.c  by Richard Zanibbi (May 1998) for
 #include <stdlib.h>
 #include <math.h>
 
-void edgeGradient(unsigned char inImg[MAXROWS][MAXCOLS], int rows, int cols, unsigned char outimg[MAXROWS][MAXCOLS]) {
+void edgeGradient(unsigned char inImg[MAXROWS][MAXCOLS], int rows, int cols,
+                  unsigned char outimg[MAXROWS][MAXCOLS], int thread_num) {
     int sobelXkernel[3][3] = {{1, 0, -1},
                               {2, 0, -2},
                               {1, 0, -1}};
@@ -22,19 +23,20 @@ void edgeGradient(unsigned char inImg[MAXROWS][MAXCOLS], int rows, int cols, uns
                               {-1, -2, -1}};
 
     int row, col;
+#pragma omp parallel for num_threads(thread_num)
     for (row = 0; row < rows; row++) {
         for (col = 0; col < cols; col++) {
 
-            long xAcc = 0;
-            long yAcc = 0;
+            double xAcc = 0;
+            double yAcc = 0;
             //instead of wrapping around a toroid we just repeat first/last coloum and row
             int krow, kcol;
 
             for (krow = 0; krow < 3; krow++) {
                 for (kcol = 0; kcol < 3; kcol++) {
                     //get the kernel value
-                    int xval = sobelXkernel[krow][kcol];
-                    int yval = sobelYkernel[krow][kcol];
+                    double xval = sobelXkernel[krow][kcol] * 0.25;
+                    double yval = sobelYkernel[krow][kcol] * 0.25;
 
                     int krowoffset = krow - 1;
                     int kcoloffset = kcol - 1;
@@ -50,16 +52,14 @@ void edgeGradient(unsigned char inImg[MAXROWS][MAXCOLS], int rows, int cols, uns
                 }
             }
 
-            // Calculate
-            double val = sqrt(pow(xAcc, 2) + pow(yAcc, 2));
-            // Normalize value
-            outimg[row][col] = (unsigned char) fmin(fmax(val, 0), 255);
+            outimg[row][col] = (unsigned char) sqrt(pow(xAcc, 2) + pow(yAcc, 2));
         }
     }
 }
 
 
 void main(int argc, char *argv[]) {
+    int thread_num;
     long rows, cols;                         /* dimensions of the pixmap */
     unsigned char image[MAXROWS][MAXCOLS];  /* 2D array to hold the image */
     unsigned char out[MAXROWS][MAXCOLS];
@@ -68,10 +68,12 @@ void main(int argc, char *argv[]) {
     int writeOK;                           /* flag for succesful write */
 
 
-    if (argc != 3) {
-        printf("Usage: %s <input image path> <output file name>\n", argv[0]);
+    if (argc != 4) {
+        printf("Usage: %s <input image path> <output file name> <num threads>\n", argv[0]);
         exit(1);
     }
+
+    thread_num = atoi(argv[3]);
 
     printf("input filename:\n"); /*  and manipulate it. */
     readOK = pgmRead(argv[1], &rows, &cols, image);
@@ -81,7 +83,7 @@ void main(int argc, char *argv[]) {
         exit(1);
     }
 
-    edgeGradient(image, rows, cols, out);
+    edgeGradient(image, rows, cols, out, thread_num);
 
     writeOK = pgmWrite(argv[2], rows, cols, out, NULL);
 
