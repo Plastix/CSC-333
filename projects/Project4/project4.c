@@ -12,12 +12,30 @@ based initially on demopgm.c  by Richard Zanibbi (May 1998) for
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <memory.h>
 
 #ifndef max
 #define max(a, b) ((a) > (b) ? (a) : (b))
 #endif
 
 #define degreesToRadians(angleDegrees) (angleDegrees * M_PI / 180.0)
+
+typedef struct {
+    int votes;
+    int radius;
+    int theta;
+
+} Line;
+
+int line_compare(const void *a, const void *b) {
+    Line *x = (Line *) a;
+    Line *y = (Line *) b;
+    return y->votes - x->votes;
+}
+
+void printLine(Line line) {
+    printf("[votes: %i, radius: %i, theta: %i]\n", line.votes, line.radius, line.theta);
+}
 
 void edgeGradient(unsigned char inImg[MAXROWS][MAXCOLS], int rows, int cols,
                   unsigned char outimg[MAXROWS][MAXCOLS], int thread_num) {
@@ -63,12 +81,13 @@ void edgeGradient(unsigned char inImg[MAXROWS][MAXCOLS], int rows, int cols,
     }
 }
 
-int *lineDetect(unsigned char inImg[MAXROWS][MAXCOLS], int rows, int cols,
-                int thetaBins, int radiiBins, int thread_num,
-                unsigned char threshold) {
+Line *lineDetect(unsigned char inImg[MAXROWS][MAXCOLS], int rows, int cols,
+                 int thetaBins, int radiiBins, int thread_num,
+                 unsigned char threshold, unsigned char numLines) {
 
 
-    int *counts = calloc((size_t) (thetaBins * radiiBins), sizeof(int));
+    long numBins = thetaBins * radiiBins;
+    int *counts = calloc((size_t) numBins, sizeof(int));
 
     int maxR = max(rows, cols);
     int radiiBinWidth = maxR / radiiBins;
@@ -80,7 +99,6 @@ int *lineDetect(unsigned char inImg[MAXROWS][MAXCOLS], int rows, int cols,
             unsigned char pixel = inImg[row][col];
 
             if (pixel >= threshold) {
-
                 int theta;
                 for (theta = 0; theta < 180; theta += thetaBinWidth) {
                     double rad = degreesToRadians(theta);
@@ -94,7 +112,28 @@ int *lineDetect(unsigned char inImg[MAXROWS][MAXCOLS], int rows, int cols,
         }
     }
 
-    return counts;
+    // Convert tally array to flat array of lines
+    Line *lines = calloc((size_t) numBins, sizeof(Line));
+    int i = 0;
+    int t, r;
+    for (r = 0; r < radiiBins; r++) {
+        for (t = 0; t < thetaBins; t++) {
+            lines[i].votes = counts[thetaBins * r + t];
+            lines[i].theta = t * thetaBinWidth;
+            lines[i].radius = r * radiiBinWidth;
+            i++;
+        }
+    }
+
+    free(counts);
+    // Sort lines by number of votes
+    qsort(lines, (size_t) numBins, sizeof(Line), line_compare);
+
+    Line *result = calloc(numLines, sizeof(Line));
+    memcpy(result, lines, numLines * sizeof(Line));
+    free(lines);
+
+    return result;
 }
 
 void main(int argc, char *argv[]) {
@@ -103,9 +142,7 @@ void main(int argc, char *argv[]) {
     unsigned char image[MAXROWS][MAXCOLS];  /* 2D array to hold the image */
     unsigned char out[MAXROWS][MAXCOLS];
 
-    int readOK, loopCondition, request;     /* two flags and user's request */
-    int writeOK;                           /* flag for succesful write */
-
+    int readOK, writeOK; // Error checking flags
 
     if (argc != 4) {
         printf("Usage: %s <input image path> <output file name> <num threads>\n", argv[0]);
@@ -113,8 +150,6 @@ void main(int argc, char *argv[]) {
     }
 
     thread_num = atoi(argv[3]);
-
-    printf("input filename:\n"); /*  and manipulate it. */
     readOK = pgmRead(argv[1], &rows, &cols, image);
 
     if (!readOK) {
@@ -125,17 +160,33 @@ void main(int argc, char *argv[]) {
     int thetaBins = 20;
     int radiiBins = 20;
     edgeGradient(image, rows, cols, out, thread_num);
-    int *counts = lineDetect(out, rows, cols, thetaBins, radiiBins, thread_num, 200);
 
-    for (int i = 0; i < radiiBins; i++) {
-        for (int j = 0; j < thetaBins; j++) {
-            printf("%i ", counts[i * thetaBins + j]);
-        }
-        printf("\n");
+    Line *lines = lineDetect(out, rows, cols, thetaBins, radiiBins, thread_num, 200, 5);
+
+    int i;
+    for (i = 0; i < 5; i++) {
+        printf("Line %i\n", i);
+        printLine(lines[i]);
+
+
+        int radius = lines[i].radius;
+        int theta = lines[i].theta;
+        double a = cos(theta);
+        double b = sin(theta);
+        double x0 = a * radius;
+        double y0 = b * radius;
+
+        int alpha = 20;
+
+        double x1 = x0 + alpha * (-b);
+        double y1 = y0 + alpha * (a);
+        double x2 = x0 - alpha * (-b);
+        double y2 = y0 - alpha * (a);
+
+        printf("pt1: (%.0f,%.0f) | pt2: (%.0f,%.0f)\n\n", x1, y1, x2, y2);
     }
 
-
-    free(counts);
+    free(lines);
 
     writeOK = pgmWrite(argv[2], rows, cols, out, NULL);
 
