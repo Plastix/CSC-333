@@ -14,10 +14,6 @@ based initially on demopgm.c  by Richard Zanibbi (May 1998) for
 #include <math.h>
 #include <memory.h>
 
-#ifndef max
-#define max(a, b) ((a) > (b) ? (a) : (b))
-#endif
-
 #define degreesToRadians(angleDegrees) (angleDegrees * M_PI / 180.0)
 
 typedef struct {
@@ -87,11 +83,12 @@ Line *lineDetect(unsigned char inImg[MAXROWS][MAXCOLS], int rows, int cols,
 
 
     long numBins = thetaBins * radiiBins;
-    int *counts = calloc((size_t) numBins, sizeof(int));
+    int counts[radiiBins][thetaBins];
+    memset(counts, 0, numBins * sizeof(int)); // Zero out counts
 
-    int maxR = max(rows, cols);
-    int radiiBinWidth = maxR / radiiBins;
-    int thetaBinWidth = 180 / thetaBins;
+    double maxRadius = hypot(cols - 1, rows - 1);
+    double radiiBinWidth = maxRadius / radiiBins;
+    double thetaBinWidth = 180.0 / thetaBins;
 
     int row, col;
     for (row = 0; row < rows; row++) {
@@ -104,29 +101,28 @@ Line *lineDetect(unsigned char inImg[MAXROWS][MAXCOLS], int rows, int cols,
                     double rad = degreesToRadians(theta);
                     double r = col * cos(rad) + row * sin(rad);
                     int radiiBin = (int) floor(fabs(r) / radiiBinWidth);
-                    int thetaBin = theta / thetaBinWidth;
+                    int thetaBin = (int) floor(theta / thetaBinWidth);
 
-                    counts[thetaBins * radiiBin + thetaBin]++;
+                    counts[radiiBin][thetaBin]++;
                 }
             }
         }
     }
 
-    // Convert tally array to flat array of lines
+    // Convert tally array to flat array of Line objects
     Line *lines = calloc((size_t) numBins, sizeof(Line));
     int i = 0;
     int t, r;
     for (r = 0; r < radiiBins; r++) {
         for (t = 0; t < thetaBins; t++) {
-            lines[i].votes = counts[thetaBins * r + t];
-            lines[i].theta = t * thetaBinWidth;
-            lines[i].radius = r * radiiBinWidth;
+            lines[i].votes = counts[r][t];
+            lines[i].theta = (int) floor(t * thetaBinWidth);
+            lines[i].radius = (int) floor(r * radiiBinWidth);
             i++;
         }
     }
 
-    free(counts);
-    // Sort lines by number of votes
+    // Sort line array by number of votes
     qsort(lines, (size_t) numBins, sizeof(Line), line_compare);
 
     Line *result = calloc(numLines, sizeof(Line));
@@ -161,34 +157,29 @@ void main(int argc, char *argv[]) {
     int radiiBins = 20;
     edgeGradient(image, rows, cols, out, thread_num);
 
-    Line *lines = lineDetect(out, rows, cols, thetaBins, radiiBins, thread_num, 200, 5);
+    unsigned char numLines = 5;
+    Line *lines = lineDetect(out, rows, cols, thetaBins, radiiBins, thread_num, 150, numLines);
 
     int i;
-    for (i = 0; i < 5; i++) {
-        printf("Line %i\n", i);
+    for (i = 0; i < numLines; i++) {
         printLine(lines[i]);
 
+        int row, col;
+        for (row = 0; row < rows; row++) {
+            for (col = 0; col < cols; col++) {
+                int radius = lines[i].radius;
+                int theta = lines[i].theta;
 
-        int radius = lines[i].radius;
-        int theta = lines[i].theta;
-        double a = cos(theta);
-        double b = sin(theta);
-        double x0 = a * radius;
-        double y0 = b * radius;
-
-        int alpha = 20;
-
-        double x1 = x0 + alpha * (-b);
-        double y1 = y0 + alpha * (a);
-        double x2 = x0 - alpha * (-b);
-        double y2 = y0 - alpha * (a);
-
-        printf("pt1: (%.0f,%.0f) | pt2: (%.0f,%.0f)\n\n", x1, y1, x2, y2);
+                if (radius == (int) (col * cos(theta) + row * sin(theta))) {
+                    image[row][col] = 255;
+                }
+            }
+        }
     }
 
     free(lines);
 
-    writeOK = pgmWrite(argv[2], rows, cols, out, NULL);
+    writeOK = pgmWrite(argv[2], rows, cols, image, NULL);
 
     if (writeOK) {
         printf("Successfully processed image!\n");
