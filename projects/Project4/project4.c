@@ -13,6 +13,7 @@ based initially on demopgm.c  by Richard Zanibbi (May 1998) for
 #include <stdlib.h>
 #include <math.h>
 #include <memory.h>
+#include <omp.h>
 
 #define degreesToRadians(angleDegrees) (angleDegrees * M_PI / 180.0)
 
@@ -43,6 +44,7 @@ void edgeGradient(unsigned char inImg[MAXROWS][MAXCOLS], int rows, int cols,
                               {-1, -2, -1}};
 
     int row, col;
+    double start = omp_get_wtime();
 #pragma omp parallel for num_threads(thread_num) private(col)
     for (row = 0; row < rows; row++) {
         for (col = 0; col < cols; col++) {
@@ -75,6 +77,8 @@ void edgeGradient(unsigned char inImg[MAXROWS][MAXCOLS], int rows, int cols,
             outimg[row][col] = (unsigned char) sqrt(pow(xAcc, 2) + pow(yAcc, 2));
         }
     }
+    double end = omp_get_wtime();
+    printf("Edge Gradient: %e sec\n", end - start);
 }
 
 Line *lineDetect(unsigned char inImg[MAXROWS][MAXCOLS], int rows, int cols,
@@ -88,7 +92,7 @@ Line *lineDetect(unsigned char inImg[MAXROWS][MAXCOLS], int rows, int cols,
     double thetaBinWidth = 180.0f / thetaBins;
 
     int row, col;
-
+    double start = omp_get_wtime();
 #pragma omp parallel for num_threads(thread_num) private(col)
     for (row = 0; row < rows; row++) {
         for (col = 0; col < cols; col++) {
@@ -110,6 +114,9 @@ Line *lineDetect(unsigned char inImg[MAXROWS][MAXCOLS], int rows, int cols,
             }
         }
     }
+
+    double end = omp_get_wtime();
+    printf("Hough Transform: %e sec\n", end - start);
 
     // Calculate theta and r for lines
     int r, t;
