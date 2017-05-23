@@ -43,7 +43,6 @@ void edgeGradient(unsigned char inImg[MAXROWS][MAXCOLS], int rows, int cols,
                               {-1, -2, -1}};
 
     int row, col;
-#pragma omp parallel for num_threads(thread_num)
     for (row = 0; row < rows; row++) {
         for (col = 0; col < cols; col++) {
 
@@ -79,16 +78,14 @@ void edgeGradient(unsigned char inImg[MAXROWS][MAXCOLS], int rows, int cols,
 
 Line *lineDetect(unsigned char inImg[MAXROWS][MAXCOLS], int rows, int cols,
                  int thetaBins, int radiiBins, int thread_num,
-                 unsigned char threshold, unsigned char numLines) {
-
-
+                 unsigned char threshold, int numLines) {
     long numBins = thetaBins * radiiBins;
     int counts[radiiBins][thetaBins];
     memset(counts, 0, numBins * sizeof(int)); // Zero out counts
 
     double maxRadius = hypot(cols - 1, rows - 1);
     double radiiBinWidth = maxRadius / radiiBins;
-    double thetaBinWidth = 180.0 / thetaBins;
+    double thetaBinWidth = 180.0f / thetaBins;
 
     int row, col;
     for (row = 0; row < rows; row++) {
@@ -132,16 +129,36 @@ Line *lineDetect(unsigned char inImg[MAXROWS][MAXCOLS], int rows, int cols,
     return result;
 }
 
+void drawLines(Line *lines, int numLines,
+               unsigned char image[MAXROWS][MAXCOLS], int rows, int cols) {
+    int i;
+    for (i = 0; i < numLines; i++) {
+        printLine(lines[i]);
+
+        int row, col;
+        for (row = 0; row < rows; row++) {
+            for (col = 0; col < cols; col++) {
+                int radius = lines[i].radius;
+                double rad = degreesToRadians(lines[i].theta);
+
+                if (radius == (int) floor(col * cos(rad) + row * sin(rad))) {
+                    image[row][col] = 255;
+                }
+            }
+        }
+    }
+}
+
 void main(int argc, char *argv[]) {
     int thread_num;
     long rows, cols;                         /* dimensions of the pixmap */
     unsigned char image[MAXROWS][MAXCOLS];  /* 2D array to hold the image */
-    unsigned char out[MAXROWS][MAXCOLS];
+    unsigned char sobel[MAXROWS][MAXCOLS];
 
     int readOK, writeOK; // Error checking flags
 
-    if (argc != 4) {
-        printf("Usage: %s <input image path> <output file name> <num threads>\n", argv[0]);
+    if (argc != 6) {
+        printf("Usage: %s <input image path> <output file name> <num threads> <num lines> <threshold>\n", argv[0]);
         exit(1);
     }
 
@@ -154,32 +171,17 @@ void main(int argc, char *argv[]) {
     }
 
     int thetaBins = 20;
-    int radiiBins = 20;
-    edgeGradient(image, rows, cols, out, thread_num);
+    int radiiBins = 45;
 
-    unsigned char numLines = 5;
-    Line *lines = lineDetect(out, rows, cols, thetaBins, radiiBins, thread_num, 150, numLines);
+    edgeGradient(image, rows, cols, sobel, thread_num);
 
-    int i;
-    for (i = 0; i < numLines; i++) {
-        printLine(lines[i]);
-
-        int row, col;
-        for (row = 0; row < rows; row++) {
-            for (col = 0; col < cols; col++) {
-                int radius = lines[i].radius;
-                int theta = lines[i].theta;
-
-                if (radius == (int) (col * cos(theta) + row * sin(theta))) {
-                    image[row][col] = 255;
-                }
-            }
-        }
-    }
-
+    int numLines = atoi(argv[4]);
+    int threshold = atoi(argv[5]);
+    Line *lines = lineDetect(sobel, rows, cols, thetaBins, radiiBins, thread_num, threshold, numLines);
+    drawLines(lines, numLines, sobel, rows, cols);
     free(lines);
 
-    writeOK = pgmWrite(argv[2], rows, cols, image, NULL);
+    writeOK = pgmWrite(argv[2], rows, cols, sobel, NULL);
 
     if (writeOK) {
         printf("Successfully processed image!\n");
