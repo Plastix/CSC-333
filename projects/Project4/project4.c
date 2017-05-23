@@ -43,6 +43,7 @@ void edgeGradient(unsigned char inImg[MAXROWS][MAXCOLS], int rows, int cols,
                               {-1, -2, -1}};
 
     int row, col;
+#pragma omp parallel for num_threads(thread_num) private(col)
     for (row = 0; row < rows; row++) {
         for (col = 0; col < cols; col++) {
 
@@ -80,14 +81,15 @@ Line *lineDetect(unsigned char inImg[MAXROWS][MAXCOLS], int rows, int cols,
                  int thetaBins, int radiiBins, int thread_num,
                  unsigned char threshold, int numLines) {
     long numBins = thetaBins * radiiBins;
-    int counts[radiiBins][thetaBins];
-    memset(counts, 0, numBins * sizeof(int)); // Zero out counts
+    Line *counts = calloc((size_t) numBins, sizeof(Line));
 
     double maxRadius = hypot(cols - 1, rows - 1);
     double radiiBinWidth = maxRadius / radiiBins;
     double thetaBinWidth = 180.0f / thetaBins;
 
     int row, col;
+
+#pragma omp parallel for num_threads(thread_num) private(col)
     for (row = 0; row < rows; row++) {
         for (col = 0; col < cols; col++) {
             unsigned char pixel = inImg[row][col];
@@ -97,34 +99,34 @@ Line *lineDetect(unsigned char inImg[MAXROWS][MAXCOLS], int rows, int cols,
                 for (theta = 0; theta < 180; theta += thetaBinWidth) {
                     double rad = degreesToRadians(theta);
                     double r = col * cos(rad) + row * sin(rad);
-                    int radiiBin = (int) floor(fabs(r) / radiiBinWidth);
-                    int thetaBin = (int) floor(theta / thetaBinWidth);
+                    int radiiBin = (int) floor(fabs(r) / radiiBinWidth); // Row
+                    int thetaBin = (int) floor(theta / thetaBinWidth); // Col
 
-                    counts[radiiBin][thetaBin]++;
+                    int index = (radiiBin * thetaBins) + thetaBin;
+
+#pragma omp critical
+                    counts[index].votes++;
                 }
             }
         }
     }
 
-    // Convert tally array to flat array of Line objects
-    Line *lines = calloc((size_t) numBins, sizeof(Line));
-    int i = 0;
-    int t, r;
+    // Calculate theta and r for lines
+    int r, t;
     for (r = 0; r < radiiBins; r++) {
         for (t = 0; t < thetaBins; t++) {
-            lines[i].votes = counts[r][t];
-            lines[i].theta = (int) floor(t * thetaBinWidth);
-            lines[i].radius = (int) floor(r * radiiBinWidth);
-            i++;
+            int index = (r * thetaBins) + t;
+            counts[index].theta = (int) floor(t * thetaBinWidth);
+            counts[index].radius = (int) floor(r * radiiBinWidth);
         }
     }
 
     // Sort line array by number of votes
-    qsort(lines, (size_t) numBins, sizeof(Line), line_compare);
+    qsort(counts, (size_t) numBins, sizeof(Line), line_compare);
 
-    Line *result = calloc(numLines, sizeof(Line));
-    memcpy(result, lines, numLines * sizeof(Line));
-    free(lines);
+    Line *result = calloc((size_t) numLines, sizeof(Line));
+    memcpy(result, counts, numLines * sizeof(Line));
+    free(counts);
 
     return result;
 }
@@ -171,7 +173,7 @@ void main(int argc, char *argv[]) {
     }
 
     int thetaBins = 20;
-    int radiiBins = 45;
+    int radiiBins = 100;
 
     edgeGradient(image, rows, cols, sobel, thread_num);
 
