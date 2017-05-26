@@ -20,5 +20,8 @@ all: $(BINS)
 $(EXEC): $(OBJECTS)
 	$(CC) $(LDFLAGS) $(OBJECTS) -o $(EXEC) -lm
 
+main: main.o ppm.o
+	$(CC) $(LDFLAGS) $(OBJECTS) -o $@ $(USEMATH)
+
 clean:
 	rm -f $(OBJECTS) $(BINS)

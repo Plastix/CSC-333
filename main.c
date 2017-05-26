@@ -1,22 +1,24 @@
-#include <stdio.h>
 
 #include "ppm.h"
 
 int main(int argc, char *argv[]) {
 
-    int w = 1024, h = 768;
-
-    initialize(w, h);
+    ppm_image *image = make_image(500, 500);
+    int w = image->width;
+    int h = image->height;
 
     int i, j;
-    for (i = 0; i < w; i++) {
-        set_pixel_rgb(i, h / 2, 0, 255, 0);
+    for (i = 0; i < h; i++) {
+        for (j = 0; j < w; j++) {
+            int color = 255;
+
+            if (i == h / 2 || j == w / 2) color = 127;
+            set_pixel(image, i, j, color, color, color);
+        }
     }
 
-    for (j = 0; j < h; j++) {
-        set_pixel_rgb(w / 2, j, 255, 0, 0);
-    }
-    save_image("test_set_bg_pixel.ppm");
+    write_image(image, "test.ppm");
+    free_image(image);
 
     return 0;
 
