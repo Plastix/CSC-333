@@ -37,9 +37,9 @@ PointList convexHull(PointList pointList) {
 
     int x;
     for (x = 0; x < n; x++) {
+        Point a = pointList.points[x];
         int y;
         for (y = 0; y < n; y++) {
-            Point a = pointList.points[x];
             Point b = pointList.points[y];
 
             if (a.x == b.x && a.y == b.y) {
@@ -62,18 +62,16 @@ PointList convexHull(PointList pointList) {
             }
 
             if (isConvex) {
-                hull[index] = a;
-                index++;
-                hull[index] = b;
-                index++;
+                hull[index++] = a;
+                hull[index++] = b;
             }
         }
     }
 
     PointList result;
     result.length = index;
-    result.points = calloc((size_t) index, sizeof(Point));
-    memcpy(result.points, hull, index * sizeof(Point));
+    result.points = calloc((size_t) index + 1, sizeof(Point));
+    memcpy(result.points, hull, (index + 1) * sizeof(Point));
 
     return result;
 }
@@ -93,13 +91,14 @@ int main(int argc, char *argv[]) {
     ppm_image *image = make_image(w, h);
     set_background_color(image, 255, 255, 255);
 
+    int numPoints = atoi(argv[3]);
     PointList points;
-    points.length = atoi(argv[3]);
+    points.length = numPoints;
     points.points = calloc((size_t) points.length, sizeof(Point));
 
     printf("Generating points...\n");
     int i = 0;
-    while (i < points.length) {
+    while (i < numPoints) {
         int x = (rand() % w);
         int y = (rand() % h);
 
