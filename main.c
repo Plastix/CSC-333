@@ -4,9 +4,6 @@
 #include "ppm.h"
 #include "ppm_utils.h"
 
-const int w = 500;
-const int h = 500;
-
 typedef struct {
     int x, y;
 } Point;
@@ -29,13 +26,7 @@ void printPointList(PointList pointList) {
 }
 
 int ccw(Point a, Point b, Point c) {
-    double area = (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
-    if (area < 0) {
-        return -1;
-    } else if (area > 0) {
-        return 1;
-    }
-    return 0;
+    return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
 }
 
 PointList convexHull(PointList pointList) {
@@ -48,24 +39,23 @@ PointList convexHull(PointList pointList) {
     for (x = 0; x < n; x++) {
         int y;
         for (y = 0; y < n; y++) {
-            if (x == y) {
-                continue;
-            }
-
             Point a = pointList.points[x];
             Point b = pointList.points[y];
+
+            if (a.x == b.x && a.y == b.y) {
+                continue;
+            }
 
             int isConvex = 1;
             int k;
             for (k = 0; k < n; k++) {
+                Point c = pointList.points[k];
 
-                if (k == x || k == y) {
+                if ((a.x == c.x && a.y == c.y) || (b.x == c.x && b.y == c.y)) {
                     continue;
                 }
 
-                Point c = pointList.points[k];
-
-                if (ccw(a, b, c) == -1) {
+                if (ccw(a, b, c) < 0) {
                     isConvex = 0;
                     break;
                 }
@@ -76,7 +66,6 @@ PointList convexHull(PointList pointList) {
                 index++;
                 hull[index] = b;
                 index++;
-
             }
         }
     }
@@ -93,34 +82,45 @@ int main(int argc, char *argv[]) {
 
     srand((unsigned int) time(NULL));
 
+    if (argc != 4) {
+        printf("Usage: %s <width> <height> <num points>\n", argv[0]);
+        exit(1);
+    }
+
+    int w = atoi(argv[1]);
+    int h = atoi(argv[2]);
+
     ppm_image *image = make_image(w, h);
     set_background_color(image, 255, 255, 255);
 
     PointList points;
-    points.length = 20;
+    points.length = atoi(argv[3]);
     points.points = calloc((size_t) points.length, sizeof(Point));
 
-    int i;
-    for (i = 0; i < points.length; i++) {
-        int x = (rand() % 200) + 150;
-        int y = (rand() % 200) + 150;
-        points.points[i].x = x;
-        points.points[i].y = y;
-        draw_circle(image, x, y, 5, 0, 0, 0);
+    printf("Generating points...\n");
+    int i = 0;
+    while (i < points.length) {
+        int x = (rand() % w);
+        int y = (rand() % h);
+
+        if (hypot(x - (w / 2.0), y - (h / 2.0)) <= 0.4 * w) {
+            points.points[i].x = x;
+            points.points[i].y = y;
+            draw_circle(image, x, y, 1, 0, 0, 0);
+            i++;
+        }
+
     }
 
+    printf("Calculating convex hull...\n");
     PointList hull = convexHull(points);
 
+    printf("Drawing hull...\n");
     for (i = 0; i < hull.length - 1; i += 2) {
         Point one = hull.points[i];
         Point two = hull.points[i + 1];
         draw_circle(image, one.x, one.y, 10, 255, 0, 255);
         draw_circle(image, two.x, two.y, 10, 255, 0, 255);
-
-//        printf("Pair\n");
-//        printPoint(one);
-//        printPoint(two);
- 
         line(image, one.x, one.y, two.x, two.y, 0, 0, 255);
     }
 
