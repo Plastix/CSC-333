@@ -1,8 +1,9 @@
 
 #got some help from http://www.puxan.com/web/howto-write-generic-makefiles/
 CC=gcc
-CFLAGS=-I.
-#LDFLAGS=-v
+CFLAGS=-I. -fopenmp
+LDFLAGS= -fopenmp
+USEMATH = -lm
 
 #EXEC = hello
 OBJECTS = $(SOURCES:.c=.o)

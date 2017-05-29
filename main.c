@@ -4,6 +4,7 @@
 #include <math.h>
 #include <string.h>
 #include "ppm.h"
+#include "omp.h"
 #include "ppm_utils.h"
 
 typedef struct {
@@ -48,14 +49,15 @@ int ccw(Point a, Point b, Point c) {
     return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
 }
 
-PointList *convexHull(PointList *list) {
+PointList *convexHull(PointList *list, int threads) {
     printf("Calculating convex hull...\n");
     int n = list->length;
 
     Point *hull = calloc((size_t) (2 * n), sizeof(Point));
     int index = 0;
-
     int x;
+
+#pragma omp parallel for num_threads(threads)
     for (x = 0; x < n; x++) {
         Point a = list->points[x];
         int y;
@@ -82,8 +84,11 @@ PointList *convexHull(PointList *list) {
             }
 
             if (isConvex) {
-                hull[index++] = a;
-                hull[index++] = b;
+#pragma omp critical
+                {
+                    hull[index++] = a;
+                    hull[index++] = b;
+                };
             }
         }
     }
@@ -140,8 +145,8 @@ int main(int argc, char *argv[]) {
     unsigned int seed = (unsigned int) time(NULL);
     srand(seed);
 
-    if (argc != 4) {
-        printf("Usage: %s <width> <height> <num points>\n", argv[0]);
+    if (argc != 5) {
+        printf("Usage: %s <width> <height> <num points> <thread number>\n", argv[0]);
         exit(1);
     }
 
@@ -165,10 +170,16 @@ int main(int argc, char *argv[]) {
     drawPoints(image, points);
 
     // Calculate convex hull
-    PointList *hull = convexHull(points);
+    int threads = atoi(argv[4]);
+    double start = omp_get_wtime();
+    PointList *hull = convexHull(points, threads);
+    double end = omp_get_wtime();
+    double elapsed = end - start;
 
     // Draw convex hull on image
     drawHull(image, hull);
+
+    printf("Elapsed Time: %e\n", elapsed);
 
     // Free resources and save image
     freePointList(points);
