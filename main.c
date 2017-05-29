@@ -28,6 +28,16 @@ void printPointList(PointList pointList) {
     }
 }
 
+int ccw(Point a, Point b, Point c) {
+    double area = (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+    if (area < 0) {
+        return -1;
+    } else if (area > 0) {
+        return 1;
+    }
+    return 0;
+}
+
 PointList convexHull(PointList pointList) {
     int n = pointList.length;
 
@@ -55,11 +65,10 @@ PointList convexHull(PointList pointList) {
 
                 Point c = pointList.points[k];
 
-                if ((b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x) >= 0) {
+                if (ccw(a, b, c) == -1) {
                     isConvex = 0;
                     break;
                 }
-
             }
 
             if (isConvex) {
@@ -102,17 +111,17 @@ int main(int argc, char *argv[]) {
 
     PointList hull = convexHull(points);
 
-    for (i = 0; i < hull.length - 1; i++) {
+    for (i = 0; i < hull.length - 1; i += 2) {
         Point one = hull.points[i];
         Point two = hull.points[i + 1];
         draw_circle(image, one.x, one.y, 10, 255, 0, 255);
         draw_circle(image, two.x, two.y, 10, 255, 0, 255);
 
-        printf("Pair\n");
-        printPoint(one);
-        printPoint(two);
-
-//        line(image, one.x, one.y, two.x, two.y, 0, 0, 255);
+//        printf("Pair\n");
+//        printPoint(one);
+//        printPoint(two);
+ 
+        line(image, one.x, one.y, two.x, two.y, 0, 0, 255);
     }
 
     free(points.points);
