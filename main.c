@@ -1,34 +1,121 @@
 #include <time.h>
+#include <printf.h>
+#include <string.h>
 #include "ppm.h"
 #include "ppm_utils.h"
+
+const int w = 500;
+const int h = 500;
 
 typedef struct {
     int x, y;
 } Point;
 
+typedef struct {
+    Point *points;
+    int length;
+} PointList;
+
+void printPoint(Point point) {
+    printf("(%i, %i)\n", point.x, point.y);
+}
+
+void printPointList(PointList pointList) {
+    printf("--- Set ---\n");
+    int i;
+    for (i = 0; i < pointList.length; i++) {
+        printPoint(pointList.points[i]);
+    }
+}
+
+PointList convexHull(PointList pointList) {
+    int n = pointList.length;
+
+    Point hull[n];
+    int index = 0;
+
+    int x;
+    for (x = 0; x < n; x++) {
+        int y;
+        for (y = 0; y < n; y++) {
+            if (x == y) {
+                continue;
+            }
+
+            Point a = pointList.points[x];
+            Point b = pointList.points[y];
+
+            int isConvex = 1;
+            int k;
+            for (k = 0; k < n; k++) {
+
+                if (k == x || k == y) {
+                    continue;
+                }
+
+                Point c = pointList.points[k];
+
+                if ((b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x) >= 0) {
+                    isConvex = 0;
+                    break;
+                }
+
+            }
+
+            if (isConvex) {
+                hull[index] = a;
+                index++;
+                hull[index] = b;
+                index++;
+
+            }
+        }
+    }
+
+    PointList result;
+    result.length = index;
+    result.points = calloc((size_t) index, sizeof(Point));
+    memcpy(result.points, hull, index * sizeof(Point));
+
+    return result;
+}
+
 int main(int argc, char *argv[]) {
 
     srand((unsigned int) time(NULL));
 
-    int w = 500;
-    int h = 500;
     ppm_image *image = make_image(w, h);
     set_background_color(image, 255, 255, 255);
 
-    draw_line(image, 0, h / 2, w, h / 2, 255, 0, 0);
-    draw_line(image, w / 2, 0, w / 2, h, 0, 255, 0);
+    PointList points;
+    points.length = 20;
+    points.points = calloc((size_t) points.length, sizeof(Point));
 
-    int numPoints = 20;
-    Point points[numPoints];
     int i;
-    for (i = 0; i < numPoints; i++) {
-        int x = rand() % 500;
-        int y = rand() % 500;
-        points[i].x = x;
-        points[i].y = y;
+    for (i = 0; i < points.length; i++) {
+        int x = (rand() % 200) + 150;
+        int y = (rand() % 200) + 150;
+        points.points[i].x = x;
+        points.points[i].y = y;
         draw_circle(image, x, y, 5, 0, 0, 0);
     }
 
+    PointList hull = convexHull(points);
+
+    for (i = 0; i < hull.length - 1; i++) {
+        Point one = hull.points[i];
+        Point two = hull.points[i + 1];
+        draw_circle(image, one.x, one.y, 10, 255, 0, 255);
+        draw_circle(image, two.x, two.y, 10, 255, 0, 255);
+
+        printf("Pair\n");
+        printPoint(one);
+        printPoint(two);
+
+//        line(image, one.x, one.y, two.x, two.y, 0, 0, 255);
+    }
+
+    free(points.points);
     write_image(image, "test.ppm");
     free_image(image);
 

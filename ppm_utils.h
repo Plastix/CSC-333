@@ -14,35 +14,36 @@ void set_background_color(ppm_image *image, int r, int g, int b) {
     }
 }
 
-/**
- * Basic implementation of Bresenham's line algorithm
- */
-void draw_line(ppm_image *image, int x0, int y0, int x1, int y1, int r, int g, int b) {
-    double deltax = x1 - x0;
-    double deltay = y1 - y0;
-    double deltaerr = fabs(deltay / deltax);
+void swap(int *a, int *b) {
+    int temp = *a;
+    *a = *b;
+    *b = temp;
+}
 
-    int x, y = y0;
-    // Special case: Vertical line
-    if (x1 - x0 == 0) {
-        for (; y < y1; y++) {
-            set_pixel(image, x0, y, r, g, b);
-        }
-    } else {
-        double error = deltaerr - 0.5;
-
-        for (x = x0; x <= x1; x++) {
+// From
+// https://github.com/ssloy/tinyrenderer/wiki/Lesson-1:-Bresenham%E2%80%99s-Line-Drawing-Algorithm
+void line(ppm_image *image, int x0, int y0, int x1, int y1, int r, int g, int b) {
+    int steep = 0;
+    if (abs(x0 - x1) < abs(y0 - y1)) { // if the line is steep, we transpose the image
+        swap(&x0, &y0);
+        swap(&x1, &y1);
+        steep = 1;
+    }
+    if (x0 > x1) { // make it left−to−right
+        swap(&x0, &x1);
+        swap(&y0, &y1);
+    }
+    for (int x = x0; x <= x1; x++) {
+        float t = (x - x0) / (float) (x1 - x0);
+        int y = (int) (y0 * (1.0 - t) + y1 * t);
+        if (steep) {
+            set_pixel(image, y, x, r, g, b);
+        } else {
             set_pixel(image, x, y, r, g, b);
-            error = error + deltaerr;
-
-            if (error >= 0.5) {
-                y++;
-                error--;
-            }
         }
     }
-
 }
+
 
 /**
  * Midpoint circle algorithm
