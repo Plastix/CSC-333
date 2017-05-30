@@ -1,6 +1,7 @@
 #include <time.h>
 #include <printf.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <math.h>
 #include <string.h>
 #include "ppm.h"

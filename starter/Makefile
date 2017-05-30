@@ -1,6 +1,6 @@
 
 #got some help from http://www.puxan.com/web/howto-write-generic-makefiles/
-CC=gcc
+CC=gcc -std=c99
 CFLAGS=-I. -fopenmp
 LDFLAGS= -fopenmp
 USEMATH = -lm
