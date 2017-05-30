@@ -145,8 +145,8 @@ int main(int argc, char *argv[]) {
     unsigned int seed = (unsigned int) time(NULL);
     srand(seed);
 
-    if (argc != 5) {
-        printf("Usage: %s <width> <height> <num points> <thread number>\n", argv[0]);
+    if (argc != 6) {
+        printf("Usage: %s <width> <height> <num points> <thread number> <output file name>\n", argv[0]);
         exit(1);
     }
 
@@ -184,7 +184,7 @@ int main(int argc, char *argv[]) {
     // Free resources and save image
     freePointList(points);
     freePointList(hull);
-    write_image(image, "hull.ppm");
+    write_image(image, argv[5]);
     free_image(image);
 
     return 0;
