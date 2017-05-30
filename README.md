@@ -19,9 +19,4 @@ This will generate 100 random points within a circle, calculate the convex hull 
 
  * [PPM-lib](https://github.com/Cheekyshroom/PPM-lib) for rendering color PPM images
  * [Algorithms and Data Structures Fall 2007](https://www.cs.princeton.edu/~rs/AlgsDS07/16Geometric.pdf) for information on planar convex hull algorithms
-
-
-### Sample Output:
-
-
-
+ * [An Introduction to Parallel Programming](https://www.elsevier.com/books/an-introduction-to-parallel-programming/pacheco/978-0-12-374260-5) for OpenMP reference
