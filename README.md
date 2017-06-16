@@ -1,4 +1,4 @@
-# CSC 333 Final Project
+# BruteHull
 
 A simple brute force algorithm for finding the convex hull of a set of points in the cartesian plane. Parallelized with OpenMP.
 
